@@ -1,11 +1,11 @@
 type DataEntry = (Vec<String>, String);
-type Data = Vec<DataEntry>;
+pub type Data = Vec<DataEntry>;
 
 const REQUIRED_CLEARANCE: f64 = 0.99;
 use std::collections::HashMap;
 
 pub enum NodeType {
-    Leaf(String),
+    Leaf(f64),
     Stage
 }
 
@@ -25,11 +25,11 @@ impl DecisionTreeeClassifier {
             root: build_tree(data)
         }
     }
-    pub fn predict(&self, record: &Vec<String>) -> String {
+    pub fn predict(&self, record: &Vec<String>) -> f64 {
         let mut node = &self.root;
         loop {
             match &node.node_type {
-                NodeType::Leaf(class) => return class.clone(),
+                NodeType::Leaf(class_proba) => return *class_proba,
                 NodeType::Stage => {
                     let attr = node.attribute.unwrap();
                     let value = &record[attr as usize];
@@ -111,9 +111,16 @@ fn calculate_data_clearance(data: &Data) -> (f64, String) {
 
 fn build_tree(data: &Data) -> TreeNode {
     let clearance = calculate_data_clearance(data);
+    fn get_prob_from_clearance(clearance: (f64, String)) -> f64 {
+        if clearance.1 == "e" {
+            clearance.0
+        } else {
+            1.0 - clearance.0
+        }
+    }
     if clearance.0 >= REQUIRED_CLEARANCE {
         return TreeNode {
-            node_type: NodeType::Leaf(clearance.1),
+            node_type: NodeType::Leaf(get_prob_from_clearance(clearance)),
             children: None,
             attribute: None,
         }
@@ -129,7 +136,7 @@ fn build_tree(data: &Data) -> TreeNode {
     }
     if best_gain == 0.0 {
         return TreeNode {
-            node_type: NodeType::Leaf(clearance.1),
+            node_type: NodeType::Leaf(get_prob_from_clearance(clearance)),
             children: None,
             attribute: None,
         }
